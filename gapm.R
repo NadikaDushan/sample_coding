@@ -321,3 +321,19 @@ titanic_train %>% filter(!is.na(Age)) %>% ggplot(aes(Pclass,fill=factor(Survived
 
 titanic_train %>% filter(!is.na(Age)) %>% ggplot(aes(Survived,fill=factor(Pclass),y=..count..))+ 
   geom_bar(position = position_fill()) 
+
+
+#----- labels in bar chart
+set.seed(123)
+data <- data.frame(x = sample(LETTERS[1:6], 300, replace = TRUE))
+head(data)         
+# method 1
+ggplot(data, aes(x = factor(x), fill = factor(x))) +
+  geom_bar() +
+  geom_text(aes(label = ..count..), stat = "count", vjust = 1.5, colour = "white")
+#method 2
+data1<- as.data.frame(table(data$x))      
+data1
+ggplot(data1, aes(x = Var1, y = Freq, fill = Var1)) + 
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = Freq), vjust = 0)

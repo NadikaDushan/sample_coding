@@ -1,5 +1,5 @@
-getwd()
-setwd("D:\R_projects\Jumble")
+#getwd()
+#setwd("D:\R_projects\Jumble")
 
 library(tidyverse)
 library(dslabs)
@@ -225,7 +225,7 @@ levels(polls_us_election_2016$state)
 levels(polls_us_election_2016$grade)
 
 polls <- polls_us_election_2016 %>% 
-  filter(state=="U.S." & enddate<="2016-10-31" & (grade %in% c("A+", "A", "A-", "B+") | is.na(grade))) %>%
+  filter(state=="U.S." & enddate>="2016-10-31" & (grade %in% c("A+", "A", "A-", "B+") | is.na(grade))) %>%
   mutate(spread = rawpoll_clinton/100 - rawpoll_trump/100)
 
 one_poll_per_pollster <- polls %>% group_by(pollster) %>% filter(enddate==max(enddate)) %>% ungroup()
@@ -416,7 +416,7 @@ P2 <- data.frame(clinton_EV_2) %>%
 require(gridExtra)
 grid.arrange(P1,P2,nrow=2)
 
-#-------------------- Forcasting -------------
+#-------------------- Forecasting -------------
 one_pollster <- polls_us_election_2016 %>% filter(pollster == "Ipsos" & state == "U.S.") %>% 
   mutate(spread = rawpoll_clinton/100 - rawpoll_trump/100)
 
@@ -466,7 +466,7 @@ polls_us_election_2016 %>%
   geom_smooth(method = "loess", span = 0.15) +
   scale_y_continuous(limits = c(30, 50))
 
-#---------------data camp exerceise - -
+#---------------data camp exercise - -
 # The `cis` data have already been loaded for you
 polls <- polls_us_election_2016 %>% 
   filter(state != "U.S." & enddate >= "2016-10-31") %>% 
@@ -520,4 +520,113 @@ ggplot(theTable,
        aes(x=reorder(Position,Position,
                      function(x)-length(x)))) + #anonymous function(onetime function) remove (-) for ascending order
   geom_bar()
+#-----------------------
+require(dslabs)
+data("polls_us_election_2016")
+
+polls <- polls_us_election_2016 %>% 
+  filter(state == "U.S." & enddate >= "2016-10-31" &
+           (grade %in% c("A+","A","A-","B+") | is.na(grade))) %>% 
+  mutate(spread = rawpoll_clinton/100 - rawpoll_trump/100)
+
+one_poll_per_pollster <- polls %>% group_by(pollster) %>% 
+  filter(enddate == max(enddate)) %>%
+  ungroup()
+
+one_poll_per_pollster %>%
+  ggplot(aes(sample=spread)) + stat_qq()
+
+
+#-------------- T distribution
+
+z <- qt(0.975, nrow(one_poll_per_pollster) - 1)
+one_poll_per_pollster %>%
+  summarize(avg = mean(spread), moe = z*sd(spread)/sqrt(length(spread))) %>%
+  mutate(start = avg - moe, end = avg + moe)
+
+# quantile from t-distribution versus normal distribution
+qt(0.975, 14)    # 14 = nrow(one_poll_per_pollster) - 1
+qnorm(0.975)
+
+# Calculate the probability of seeing t-distributed random variables being more than 2 in absolute value when 'df = 3'.
+(1-pt(2,3)) + pt(-2,3)
+
+
+#---example of creating CI from small sample using normal
+data(heights)
+
+# Use the sample code to generate 'x', a vector of male heights
+x <- heights %>% filter(sex == "Male") %>%
+  .$height
+
+# Create variables for the mean height 'mu', the sample size 'N', and the number of times the simulation should run 'B'
+mu <- mean(x)
+N <- 15
+B <- 10000
+
+# Use the `set.seed` function to make sure your answer matches the expected result after random sampling
+set.seed(1)
+
+# Generate a logical vector 'res' that contains the results of the simulations
+res1 <- replicate(B,{
+  s <- sample(x,N,replace=TRUE)
+  interval <- mean(s) + c(-qnorm(.975),qnorm(0.975))*sd(s)/sqrt(N)
+  between(mu,interval[1],interval[2])
+})
+
+#---example of creating CI from small sample using t
+
+# Generate a logical vector 'res' that contains the results of the simulations using the t-distribution
+res2 <- replicate(B,{
+  s <- sample(x,N,replace=TRUE)
+  interval <- mean(s) + c(-qt(.975,14),qt(0.975,14))*sd(s)/sqrt(N)
+  between(mu,interval[1],interval[2])
+})
+
+mean(res1)
+mean(res2) #t captures the 95%
+
+#-----------------Association Tests
+
+library(tidyverse)
+library(dslabs)
+data(research_funding_rates)
+str(research_funding_rates)
+
+#----Old version as text book. use funs()
+totals1 <- research_funding_rates %>%
+  select(-discipline) %>%
+  summarize_all(funs(sum)) %>%
+  summarize(yes_men = awards_men,
+            no_men = applications_men - awards_men,
+            yes_women = awards_women,
+            no_women = applications_women - awards_women)
+
+#----New version as text book. use list()
+totals <- research_funding_rates %>%
+  select(-discipline) %>% 
+  summarise_all(list(sum)) %>% #--summarize across 9 different disciplines. function is (sum) other functions also b added
+      summarize(yes_men = awards_men,
+            no_men = applications_men - awards_men,
+            yes_women = awards_women,
+            no_women = applications_women - awards_women)
+
+identical(totals1,totals)
+
+totals %>% summarize(percent_men = yes_men/(yes_men + no_men),
+                     percent_women = yes_women/(yes_women + no_women))
+
+#----- Lady pouring Tea
+
+#-- distribution is hypergeometric means k number of success from n draws WITHOUT replacement(Binomial with replacement)
+#-- tab simulate a result with 3 success.  
+tab <- matrix(c(3,1,1,3), 2, 2)
+rownames(tab) <- c("Poured Before", "Poured After")
+colnames(tab) <- c("Guessed Before", "Guessed After")
+tab
+
+# p-value calculation with Fisher's Exact Test
+fisher.test(tab, alternative = "greater")
+
+
 
