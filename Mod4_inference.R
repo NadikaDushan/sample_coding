@@ -476,6 +476,8 @@ cis <- polls %>% mutate(X_hat = (spread+1)/2, se = 2*sqrt(X_hat*(1-X_hat)/sample
                         lower = spread - qnorm(0.975)*se, upper = spread + qnorm(0.975)*se) %>%
   select(state, startdate, enddate, pollster, grade, spread, lower, upper)
 
+add <- results_us_election_2016 %>% mutate(actual_spread = clinton/100 - trump/100) %>% select(state, actual_spread)
+
 ci_data <- cis %>% mutate(state = as.character(state)) %>% left_join(add, by = "state")
 
 
@@ -497,6 +499,44 @@ p_hits <- ci_data %>% mutate(hit=upper>actual_spread & actual_spread > lower) %>
 
 p_hits %>% mutate(state=fct_reorder(state,proportion_hits)) %>% ggplot(aes(x=state)) + geom_bar(aes(weight=proportion_hits)) + coord_flip() 
 p_hits %>% mutate(state=fct_reorder(state,proportion_hits,.desc = TRUE)) %>% ggplot(aes(x=state)) + geom_bar(aes(weight=proportion_hits)) + coord_flip() 
+
+
+#------------ Data Camp Example
+polls <- polls_us_election_2016 %>% 
+  filter(state != "U.S." & enddate >= "2016-10-31") %>% 
+  mutate(spread = rawpoll_clinton/100 - rawpoll_trump/100)
+
+cis <- polls %>% mutate(X_hat = (spread+1)/2, se = 2*sqrt(X_hat*(1-X_hat)/samplesize), 
+                        lower = spread - qnorm(0.975)*se, upper = spread + qnorm(0.975)*se) %>%
+  select(state, startdate, enddate, pollster, grade, spread, lower, upper)
+
+add <- results_us_election_2016 %>% mutate(actual_spread = clinton/100 - trump/100) %>% select(state, actual_spread)
+
+ci_data <- cis %>% mutate(state = as.character(state)) %>% left_join(add, by = "state")
+
+
+errors <- ci_data %>% mutate(error=spread-actual_spread,hit=sign(spread)==sign(actual_spread))
+
+
+totals <- errors %>%
+  filter(grade %in% c("A-", "C-")) %>%
+  group_by(grade,hit) %>%
+  summarize(num = n()) %>%
+  spread(grade, num)
+# Print the proportion of hits for grade A- polls to the console
+totals[[2,3]]/sum(totals[[3]])
+
+# Print the proportion of hits for grade C- polls to the console
+totals[[2,2]]/sum(totals[[2]])
+ 
+
+chisq_test <- totals %>% select(-hit) %>% chisq.test()
+chisq_test$p.value
+
+odds_C <- (totals[[2,2]]/sum(totals[[2]]))/(totals[[1,2]]/sum(totals[[2]]))
+odds_A <- (totals[[2,3]]/sum(totals[[3]]))/(totals[[1,3]]/sum(totals[[3]]))
+odds_A/odds_C
+
 
 #------example of reordering for factoring variable itself
 theTable <- data.frame(
@@ -628,5 +668,153 @@ tab
 # p-value calculation with Fisher's Exact Test
 fisher.test(tab, alternative = "greater")
 
+#---- Chi square test
+totals <- research_funding_rates %>%
+  select(-discipline) %>% 
+  summarise_all(list(sum)) %>% #--summarize across 9 different disciplines. function is (sum) other functions also b added
+  summarize(yes_men = awards_men,
+            no_men = applications_men - awards_men,
+            yes_women = awards_women,
+            no_women = applications_women - awards_women)
+
+# compute overall funding rate
+funding_rate <- totals %>%
+  summarize(percent_total = (yes_men + yes_women) / (yes_men + no_men + yes_women + no_women)) %>%
+  .$percent_total
+funding_rate
+
+# construct two-by-two table for observed data
+two_by_two <- tibble(awarded = c("no", "yes"),
+                     men = c(totals$no_men, totals$yes_men),
+                     women = c(totals$no_women, totals$yes_women))
+two_by_two
+
+# compute null hypothesis two-by-two table
+tibble(awarded = c("no", "yes"),
+           men = (totals$no_men + totals$yes_men) * c(1-funding_rate, funding_rate),
+           women = (totals$no_women + totals$yes_women) * c(1-funding_rate, funding_rate))
+
+# chi-squared test
+chisq_test <- two_by_two %>%
+    select(-awarded) %>%
+ chisq.test()
+chisq_test$p.value
 
 
+# odds of getting funding for men
+odds_men <- (two_by_two$men[2] / sum(two_by_two$men)) /
+  (two_by_two$men[1] / sum(two_by_two$men))
+
+# odds of getting funding for women
+odds_women <- (two_by_two$women[2] / sum(two_by_two$women)) /
+  (two_by_two$women[1] / sum(two_by_two$women))
+
+# odds ratio - how many times larger odds are for men than women
+odds_men/odds_women
+
+# multiplying all observations by 10 decreases p-value without changing odds ratio.when it is significant. it can be incresed with sample size
+two_by_two %>%
+  select(-awarded) %>%
+  mutate(men = men*10, women = women*10) %>%
+  chisq.test()
+
+
+#--------- Brexit Polls
+
+library(tidyverse)
+options(digits = 3)
+library(dslabs)
+data(brexit_polls)
+
+p <- 0.481    # official proportion voting "Remain"
+d <- 2*p-1    # official spread
+
+
+#-----Warm up
+N <- 1500
+N*p
+sqrt(N*p*(1-p))
+sqrt(p*(1-p)/N)
+2*p-1
+2*sqrt(p*(1-p)/N)
+#------
+
+
+str(brexit_polls)
+brexit_polls <- brexit_polls %>%
+  mutate(x_hat = (1+spread)/2)
+
+mean(brexit_polls$spread)
+sd(brexit_polls$spread)
+
+mean(brexit_polls$x_hat)
+sd(brexit_polls$x_hat)
+
+ci1 <- brexit_polls[1,] %>% mutate(lower=spread - qnorm(0.975)*2*sqrt(x_hat*(1-x_hat)/samplesize),
+                              upper=spread + qnorm(0.975)*2*sqrt(x_hat*(1-x_hat)/samplesize))
+
+ci2 <- brexit_polls[1,] %>% mutate(lower=x_hat - qnorm(0.975)*sqrt(x_hat*(1-x_hat)/samplesize),
+                                  upper=x_hat + qnorm(0.975)*sqrt(x_hat*(1-x_hat)/samplesize))
+
+
+june_polls <- brexit_polls %>% filter(enddate>="2016-06-01") %>% 
+  mutate(se_x_hat=sqrt(x_hat*(1-x_hat)/samplesize),se_spred=2*se_x_hat,
+                       lower=spread - qnorm(0.975)*se_spred,
+                       upper=spread + qnorm(0.975)*se_spred,
+         hit=lower<(-0.038) & upper > -0.038)
+
+mean(june_polls$lower<0 & june_polls$upper >0)
+mean(june_polls$lower>0 & june_polls$upper >0)
+mean(june_polls$hit)
+
+june_polls %>% group_by(pollster) %>% summarise(proportion_hits=mean(hit),n=n()) %>% arrange(desc(proportion_hits))
+
+june_polls %>% group_by(poll_type) %>% ggplot(aes(spread,col=poll_type)) + geom_boxplot()
+
+
+combined_by_type <- june_polls %>%
+  group_by(poll_type) %>%
+  summarize(N = sum(samplesize),
+            spread = sum(spread*samplesize)/N,
+            p_hat = (spread + 1)/2) %>% mutate(lower=spread - qnorm(0.975)*2*sqrt(p_hat*(1-p_hat)/N),
+                                               upper=spread + qnorm(0.975)*2*sqrt(p_hat*(1-p_hat)/N),width=upper-lower)
+
+combined_by_type
+
+brexit_hit <- brexit_polls %>%
+  mutate(p_hat = (spread + 1)/2,
+         se_spread = 2*sqrt(p_hat*(1-p_hat)/samplesize),
+         spread_lower = spread - qnorm(.975)*se_spread,
+         spread_upper = spread + qnorm(.975)*se_spread,
+         hit = spread_lower < -0.038 & spread_upper > -0.038) %>%
+  select(poll_type, hit)
+
+Tibble_tp <- tibble(hit=c("yes","No"),
+                      telephone=c(sum(brexit_hit$poll_type=="Telephone" & brexit_hit$hit==TRUE),sum(brexit_hit$poll_type=="Telephone" & brexit_hit$hit==FALSE)),
+                      online=c(sum(brexit_hit$poll_type=="Online" & brexit_hit$hit==TRUE),sum(brexit_hit$poll_type=="Online" & brexit_hit$hit==FALSE)))
+
+Tibble_tp2  <- brexit_hit %>% group_by(poll_type) %>% summarise(yes=sum(hit),no=n()-sum(hit))
+
+
+Tibble_tp %>% select(-hit) %>% chisq.test()
+
+odd_tp <- (Tibble_tp[[1,2]]/sum(Tibble_tp[[2]]))/(Tibble_tp[[2,2]]/sum(Tibble_tp[[2]]))
+odd_on <- (Tibble_tp[[1,3]]/sum(Tibble_tp[[3]]))/(Tibble_tp[[2,3]]/sum(Tibble_tp[[3]]))
+
+odd_R <- odd_on/odd_tp
+
+brexit_polls %>% 
+  ggplot(aes(enddate, spread , col=poll_type)) +
+  geom_smooth(method = "loess", span = 0.4) +
+  geom_point( alpha = 0.6) + geom_line(aes(y=-0.038),col = "black")
+
+
+brexit_long <- brexit_polls %>%
+  gather(vote, proportion, "remain":"undecided") %>%
+  mutate(vote = factor(vote)) 
+  
+  brexit_long %>% ggplot(aes(enddate, proportion , col=vote)) +
+  geom_smooth(method = "loess", span = 0.3) 
+
+# +
+#   geom_point( alpha = 0.6) + geom_line(aes(y=-0.038),col = "black")
