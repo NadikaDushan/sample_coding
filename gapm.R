@@ -1,4 +1,4 @@
-setwd("C:/Users/Nadika/Desktop/R/ENV")
+#setwd("C:/Users/Nadika/Desktop/R/ENV")
 
 require(dslabs)
 data("gapminder")
@@ -88,10 +88,17 @@ gapminder %>% filter(year == 1970 & !is.na(gdp)) %>%
   ggplot(aes(region, dollars_per_day)) + 
   geom_boxplot() + 
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
+#------ Col VS Fill
+gapminder %>% filter(year == 1970 & !is.na(gdp)) %>%
+  mutate(region = reorder(region, dollars_per_day, FUN = median)) %>%    # reorder
+  ggplot(aes(region, dollars_per_day, fill = continent)) +    # color by continent with  Fill
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  xlab("") + scale_y_continuous(trans = "log2") + geom_point(show.legend = FALSE)
 
 gapminder %>% filter(year == 1970 & !is.na(gdp)) %>%
   mutate(region = reorder(region, dollars_per_day, FUN = median)) %>%    # reorder
-  ggplot(aes(region, dollars_per_day, fill = continent)) +    # color by continent
+  ggplot(aes(region, dollars_per_day, col = continent)) +    # color by continent with COL
   geom_boxplot() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
   xlab("") + scale_y_continuous(trans = "log2") + geom_point(show.legend = FALSE)
