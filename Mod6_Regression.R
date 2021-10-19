@@ -217,7 +217,11 @@ singles_slope
 Teams %>% filter(yearID %in% 1961:2001) %>% mutate(singles = (H-HR-X2B-X3B)/G , BB = BB/G , HR=HR/G) %>%
   summarise(cor(singles,BB),cor(singles,HR),cor(BB,HR)) 
 
+<<<<<<< HEAD
 # stratify5- HR per game to nearest 10, filter out strata with few points
+=======
+# stratify HR per game to nearest 10, filter out strata with few points
+>>>>>>> 485d897edc7f5a7d641ed9e25d22c1a1f95b9016
 dat_HR_strata <- Teams %>% filter( yearID %in% 1961:2001) %>%
   mutate(HR_strata = round(HR/G,1),
          BB_per_game = BB / G,
@@ -263,30 +267,4 @@ dat_HR_strata <- Teams %>% filter( yearID %in% 1961:2001) %>%
 # E[R | BB = x1, HR = x2] = β0 + β1x1 + β2x2 
   
 #------------------------ 2.1 ----------------------------------- 
- # compute RSS for any pair of beta0 and beta1 in Galton's data
- library(HistData)
- data("GaltonFamilies")
- set.seed(1983)
- galton_heights <- GaltonFamilies %>%
-   filter(gender == "male") %>%
-   group_by(family) %>%
-   sample_n(1) %>%
-   ungroup() %>%
-   select(father, childHeight) %>%
-   rename(son = childHeight)
- rss <- function(beta0, beta1){
-   resid <- galton_heights$son - (beta0+beta1*galton_heights$father)
-   return(sum(resid^2))
- }
- 
- # plot RSS as a function of beta1 when beta0=25
- beta1 = seq(0, 1, len=nrow(galton_heights))
- results <- data.frame(beta1 = beta1,
-                       rss = sapply(beta1, rss, beta0 = 25))
- results %>% ggplot(aes(beta1, rss)) + geom_line() + 
-   geom_line(aes(beta1, rss))
- 
- 
- 
- 
-   
+
