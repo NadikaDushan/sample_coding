@@ -268,12 +268,9 @@ dat_HR_strata <- Teams %>% filter( yearID %in% 1961:2001) %>%
  # compute RSS for any pair of beta0 and beta1 in Galton's data
  library(HistData)
  data("GaltonFamilies")
-<<<<<<< HEAD
+
  set.seed(1983, sample.kind = "Rounding")
  
-=======
- set.seed(1983)
->>>>>>> e78dfff2b43810b0fe6dc412120c01f6b97064fe
  galton_heights <- GaltonFamilies %>%
    filter(gender == "male") %>%
    group_by(family) %>%
@@ -281,11 +278,8 @@ dat_HR_strata <- Teams %>% filter( yearID %in% 1961:2001) %>%
    ungroup() %>%
    select(father, childHeight) %>%
    rename(son = childHeight)
-<<<<<<< HEAD
- 
-=======
->>>>>>> e78dfff2b43810b0fe6dc412120c01f6b97064fe
- rss <- function(beta0, beta1){
+
+  rss <- function(beta0, beta1){
    resid <- galton_heights$son - (beta0+beta1*galton_heights$father)
    return(sum(resid^2))
  }
@@ -296,7 +290,6 @@ dat_HR_strata <- Teams %>% filter( yearID %in% 1961:2001) %>%
                        rss = sapply(beta1, rss, beta0 = 25))
  results %>% ggplot(aes(beta1, rss)) + geom_line() + 
    geom_line(aes(beta1, rss))
-<<<<<<< HEAD
 
  # fit regression line to predict son's height from father's height
  fit <- lm(son ~ father, data = galton_heights)
@@ -315,5 +308,3 @@ lse <- replicate(B,{sample_n(galton_heights,N,replace = TRUE) %>%
 lse <- data.frame(beta0=lse[1,],beta1=lse[2,])
 
 
-=======
->>>>>>> e78dfff2b43810b0fe6dc412120c01f6b97064fe
